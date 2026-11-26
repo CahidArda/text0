@@ -1,4 +1,4 @@
-import { vector } from "@/lib/vector";
+import { queryChunks } from "@/lib/search";
 import { type LanguageModelV1, streamText } from "ai";
 
 import { minimax } from "@/lib/minimax";
@@ -49,26 +49,16 @@ export async function POST(request: NextRequest) {
 			model = openai("gpt-4o-mini");
 		}
 
-		const andFilter =
-			body.references.length > 0
-				? ` AND referenceId IN ('${body.references.join("','")}')`
-				: "";
-
-		const userFilter = `userId = '${session.userId}'`;
-
-		let context = await vector.query({
-			data: body.prompt,
-			topK: 5,
-			includeData: true,
-			filter: `${userFilter}${andFilter}`,
+		let context = await queryChunks({
+			query: body.prompt,
+			userId: session.userId,
+			referenceIds: body.references,
 		});
 
-		if (andFilter && !context.some((c) => c.score > 0.875)) {
-			context = await vector.query({
-				data: body.prompt,
-				topK: 5,
-				includeData: true,
-				filter: userFilter,
+		if (body.references.length > 0 && !context.some((c) => c.score > 0.875)) {
+			context = await queryChunks({
+				query: body.prompt,
+				userId: session.userId,
 			});
 		}
 

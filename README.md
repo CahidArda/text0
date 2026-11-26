@@ -38,8 +38,7 @@ A text editor with absurdly smart autocomplete. Text0 serves as a copilot for wr
 - Next.js
 - Tailwind CSS
 - RadixUI
-- Upstash Redis
-- Upstash Vector
+- Upstash Redis (with Redis Search)
 - AI SDK
 - UploadThing
 - Cursor

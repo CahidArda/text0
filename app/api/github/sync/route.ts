@@ -6,7 +6,7 @@ import {
 	USER_REFERENCES_KEY,
 	redis,
 } from "@/lib/redis";
-import { vector } from "@/lib/vector";
+import { upsertChunks } from "@/lib/search";
 import { type OauthAccessToken, createClerkClient } from "@clerk/backend";
 import { ClerkAPIResponseError } from "@clerk/shared";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -151,17 +151,8 @@ export async function POST() {
 		// Split the content into chunks
 		const chunks = await textSplitter.splitText(markdownContent);
 
-		// Store chunks in vector database
-		await vector.upsert(
-			chunks.map((chunk) => ({
-				id: nanoid(),
-				data: chunk,
-				metadata: {
-					userId: session.userId,
-					referenceId: referenceId,
-				},
-			})),
-		);
+		// Store chunks in Upstash Redis Search
+		await upsertChunks(chunks, { userId: session.userId, referenceId });
 
 		// Update reference info
 		const updatedInfo = {

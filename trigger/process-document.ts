@@ -1,8 +1,7 @@
 import { getUtilityModel } from "@/lib/ai-model";
 import { Firecrawl } from "@/lib/firecrawl";
-import { nanoid } from "@/lib/nanoid";
 import { REFERENCE_KEY, type Reference, redis } from "@/lib/redis";
-import { vector } from "@/lib/vector";
+import { upsertChunks } from "@/lib/search";
 import { logger, task } from "@trigger.dev/sdk/v3";
 import { generateText } from "ai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
@@ -49,18 +48,9 @@ export const processReferenceTask = task({
 		const chunks = await textSplitter.splitText(response.markdown);
 		logger.info(`Split document into ${chunks.length} chunks`);
 
-		// Store chunks in vector database
-		await vector.upsert(
-			chunks.map((chunk) => ({
-				id: nanoid(),
-				data: chunk,
-				metadata: {
-					userId: userId,
-					referenceId: referenceId,
-				},
-			})),
-		);
-		logger.info(`Upserted ${chunks.length} chunks into vector database`);
+		// Store chunks in Upstash Redis Search
+		await upsertChunks(chunks, { userId: userId, referenceId });
+		logger.info(`Upserted ${chunks.length} chunks into the search index`);
 
 		const info = {
 			...referenceInfo,

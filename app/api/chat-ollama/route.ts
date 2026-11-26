@@ -1,5 +1,5 @@
 import { getSecureSession } from "@/lib/auth/server";
-import { vector } from "@/lib/vector";
+import { queryChunks } from "@/lib/search";
 import { getWritingStylePrompt } from "@/lib/writing-styles";
 import {
 	type Message,
@@ -40,32 +40,24 @@ export async function POST(req: Request) {
 
 		const session = await getSecureSession();
 
-		const andFilter =
-			references.length > 0
-				? ` AND referenceId IN ('${references.join("','")}')`
-				: "";
+		const query = messages
+			.slice(-3)
+			.map((m: Message) => m.content)
+			.join("\n");
 
-		const userFilter = `userId = '${session.userId}'`;
-
-		let closestReferences = await vector.query({
-			data: messages
-				.slice(-3)
-				.map((m: Message) => m.content)
-				.join("\n"),
-			topK: 5,
-			includeData: true,
-			filter: `${userFilter}${andFilter}`,
+		let closestReferences = await queryChunks({
+			query,
+			userId: session.userId,
+			referenceIds: references,
 		});
 
-		if (andFilter && !closestReferences.some((c) => c.score > 0.875)) {
-			closestReferences = await vector.query({
-				data: messages
-					.slice(-3)
-					.map((m: Message) => m.content)
-					.join("\n"),
-				topK: 5,
-				includeData: true,
-				filter: userFilter,
+		if (
+			references.length > 0 &&
+			!closestReferences.some((c) => c.score > 0.875)
+		) {
+			closestReferences = await queryChunks({
+				query,
+				userId: session.userId,
 			});
 		}
 
