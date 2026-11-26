@@ -1,5 +1,5 @@
 import { getSecureSession } from "@/lib/auth/server";
-import { queryChunks } from "@/lib/search";
+import { MIN_CHUNK_SCORE, STRONG_CHUNK_SCORE, queryChunks } from "@/lib/search";
 import { getWritingStylePrompt } from "@/lib/writing-styles";
 import {
 	type Message,
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
 		if (
 			references.length > 0 &&
-			!closestReferences.some((c) => c.score > 0.875)
+			!closestReferences.some((c) => c.score > STRONG_CHUNK_SCORE)
 		) {
 			closestReferences = await queryChunks({
 				query,
@@ -61,7 +61,9 @@ export async function POST(req: Request) {
 			});
 		}
 
-		closestReferences = closestReferences.filter((c) => c.score > 0.8);
+		closestReferences = closestReferences.filter(
+			(c) => c.score > MIN_CHUNK_SCORE,
+		);
 
 		const context = closestReferences.map((c) => c.data).join("\n");
 

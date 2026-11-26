@@ -19,6 +19,16 @@ const chunkIndex = redis.search.index({
 	schema: chunkSchema,
 });
 
+// Score cutoffs for `$ann` results (0..1, higher is closer). Measured on
+// Redis Search's embeddings: relevant chunks score about 0.73-0.82 and
+// unrelated ones about 0.48-0.58, so the old Upstash Vector cutoffs
+// (0.8 / 0.875) dropped most relevant chunks.
+// Below this, a chunk is not used as context.
+export const MIN_CHUNK_SCORE = 0.65;
+// Below this, the selected references are not a good match and the query
+// falls back to all of the user's references.
+export const STRONG_CHUNK_SCORE = 0.7;
+
 let indexReady: Promise<unknown> | null = null;
 
 // Creates the index on first use. `existsOk` makes this a no-op when the

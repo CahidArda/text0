@@ -1,4 +1,4 @@
-import { queryChunks } from "@/lib/search";
+import { MIN_CHUNK_SCORE, STRONG_CHUNK_SCORE, queryChunks } from "@/lib/search";
 import { type LanguageModelV1, streamText } from "ai";
 
 import { minimax } from "@/lib/minimax";
@@ -55,14 +55,17 @@ export async function POST(request: NextRequest) {
 			referenceIds: body.references,
 		});
 
-		if (body.references.length > 0 && !context.some((c) => c.score > 0.875)) {
+		if (
+			body.references.length > 0 &&
+			!context.some((c) => c.score > STRONG_CHUNK_SCORE)
+		) {
 			context = await queryChunks({
 				query: body.prompt,
 				userId: session.userId,
 			});
 		}
 
-		context = context.filter((c) => c.score > 0.8);
+		context = context.filter((c) => c.score > MIN_CHUNK_SCORE);
 
 		const contextData = context.map((c) => c.data).join("\n");
 
